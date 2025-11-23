@@ -1,4 +1,4 @@
-# UltraPlay - IPTV & Movie Player 📺
+# Playlists - IPTV & Movie Player 
 
 A modern, fast, and lightweight web player designed for seamless streaming.  
 Watch **Live TV**, **Movies**, and **Web Series** directly from your browser with a premium Netflix-style dark interface.
