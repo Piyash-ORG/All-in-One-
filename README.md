@@ -3,11 +3,15 @@ UltraPlay - IPTV & Movie Player 📺
 
 A modern, fast, and lightweight web player designed for seamless streaming. Watch Live TV, Movies, and Web Series directly from your browser with a premium, Netflix-style dark interface.
 
+<br>
+
 <p align="center">
-<a href="https://cinemfl.vercel.app">
-<img src="https://img.shields.io/badge/View_Live_Demo-➡️-e50914.svg?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo">
-</a>
+  <a href="https://cinemfl.vercel.app">
+    <img src="https://img.shields.io/badge/View_Live_Demo-➡️-1DB954.svg?style=for-the-badge" alt="Live Demo">
+  </a>
 </p>
+
+<br>
 ---
 
 ✨ Key Features
