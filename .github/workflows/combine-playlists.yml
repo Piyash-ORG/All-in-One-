@@ -30,23 +30,22 @@ jobs:
           # শুরুতে নতুন index.m3u ফাইল তৈরি এবং হেডার যোগ করা
           echo '#EXTM3U x-tvg-url="YOUR_EPG_URL_HERE.xml"' > index.m3u
           
-          # একটি লুপ ব্যবহার করে সব ফোল্ডারের ফাইলগুলো কম্বাইন করা
-          # এটি series/, movies/ ইত্যাদি ফোল্ডারের সব .m3u ফাইল খুঁজে বের করবে
+          # ক্যাটাগরি ফোল্ডারগুলোর লিস্ট
           folders=("channels" "series" "movies" "islamic" "songs")
 
           for folder in "${folders[@]}"; do
             if [ -d "$folder" ]; then
               echo "Processing $folder folder..."
-              # ফোল্ডারের ভেতর ফাইল থাকলে সেগুলো index.m3u তে অ্যাপেন্ড করবে (হেডার বাদে)
-              find "$folder" -name "*.m3u" -exec grep -v "#EXTM3U" {} + >> index.m3u
+              # -h ফ্ল্যাগটি ফাইলের নাম লুকানোর জন্য কাজ করবে, শুধু আসল ডেটা কমিট হবে
+              find "$folder" -name "*.m3u" -exec grep -h -v "#EXTM3U" {} + >> index.m3u
             fi
           done
           
-          echo "✅ Playlists combined successfully from all categories."
+          echo "✅ Playlists combined successfully without file names."
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto-update index.m3u playlist by category"
+          commit_message: "Auto-update index.m3u playlist (fixed file names)"
           file_pattern: index.m3u
           commit_options: '--no-verify'
