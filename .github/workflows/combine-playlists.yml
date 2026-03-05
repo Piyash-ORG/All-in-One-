@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      # নির্দিষ্ট ফোল্ডারের ভেতরের সব .m3u ফাইল ট্র্যাক করবে
+      # Track all .m3u files inside specific folders
       - 'channels/**.m3u'
       - 'series/**.m3u'
       - 'movies/**.m3u'
@@ -27,25 +27,30 @@ jobs:
 
       - name: Combine M3U files
         run: |
-          # শুরুতে নতুন index.m3u ফাইল তৈরি এবং হেডার যোগ করা
+          # Create a fresh index.m3u file with the EPG header (overwrites if already exists)
           echo '#EXTM3U x-tvg-url="YOUR_EPG_URL_HERE.xml"' > index.m3u
           
-          # ক্যাটাগরি ফোল্ডারগুলোর লিস্ট
+          # Define the list of category folders
           folders=("channels" "series" "movies" "islamic" "songs")
 
           for folder in "${folders[@]}"; do
+            # Check if the folder exists before processing
             if [ -d "$folder" ]; then
-              echo "Processing $folder folder..."
-              # -h ফ্ল্যাগটি ফাইলের নাম লুকানোর জন্য কাজ করবে, শুধু আসল ডেটা কমিট হবে
-              find "$folder" -name "*.m3u" -exec grep -h -v "#EXTM3U" {} + >> index.m3u
+              echo "Processing directory: $folder..."
+              
+              # Find all .m3u files and append their contents to index.m3u
+              # '-h' hides the filename in the output, '-v' removes the '#EXTM3U' tags from inner files
+              find "$folder" -type f -name "*.m3u" -exec grep -h -v "#EXTM3U" {} + >> index.m3u
+            else
+              echo "Directory $folder not found. Skipping..."
             fi
           done
           
-          echo "✅ Playlists combined successfully without file names."
+          echo "✅ All M3U playlists have been successfully combined into index.m3u."
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto-update index.m3u playlist (fixed file names)"
+          commit_message: "Auto-update index.m3u with latest playlist data"
           file_pattern: index.m3u
           commit_options: '--no-verify'
