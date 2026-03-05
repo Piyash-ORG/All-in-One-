@@ -1,57 +1,52 @@
 name: Combine M3U Playlists
 
 on:
-  # 
   push:
     branches:
-      - main  # 
+      - main
     paths:
-      # 
-      - 'channels.m3u'
-      - 'series.m3u'
-      - 'movies.m3u'
-      - 'islamic.m3u'
-      - 'songs.m3u'
-      # 
+      # নির্দিষ্ট ফোল্ডারের ভেতরের সব .m3u ফাইল ট্র্যাক করবে
+      - 'channels/**.m3u'
+      - 'series/**.m3u'
+      - 'movies/**.m3u'
+      - 'islamic/**.m3u'
+      - 'songs/**.m3u'
 
-# **
 permissions:
   contents: write 
 
 jobs:
   build:
-    runs-on: ubuntu-latest # 
+    runs-on: ubuntu-latest
 
     steps:
-      # 
       - name: Checkout repository
         uses: actions/checkout@v4
-        # 
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 
       - name: Combine M3U files
         run: |
-          # index.m3u 
+          # শুরুতে নতুন index.m3u ফাইল তৈরি এবং হেডার যোগ করা
           echo '#EXTM3U x-tvg-url="YOUR_EPG_URL_HERE.xml"' > index.m3u
           
-          # 
-          grep -v "#EXTM3U" channels.m3u >> index.m3u
-          grep -v "#EXTM3U" series.m3u >> index.m3u
-          grep -v "#EXTM3U" movies.m3u >> index.m3u
-          grep -v "#EXTM3U" islamic.m3u >> index.m3u
-          grep -v "#EXTM3U" songs.m3u >> index.m3u
-          
-          # 
-          
-          echo "✅ Playlists combined successfully."
+          # একটি লুপ ব্যবহার করে সব ফোল্ডারের ফাইলগুলো কম্বাইন করা
+          # এটি series/, movies/ ইত্যাদি ফোল্ডারের সব .m3u ফাইল খুঁজে বের করবে
+          folders=("channels" "series" "movies" "islamic" "songs")
 
-      # 
-      # 
+          for folder in "${folders[@]}"; do
+            if [ -d "$folder" ]; then
+              echo "Processing $folder folder..."
+              # ফোল্ডারের ভেতর ফাইল থাকলে সেগুলো index.m3u তে অ্যাপেন্ড করবে (হেডার বাদে)
+              find "$folder" -name "*.m3u" -exec grep -v "#EXTM3U" {} + >> index.m3u
+            fi
+          done
+          
+          echo "✅ Playlists combined successfully from all categories."
+
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto-update index.m3u playlist"
-          file_pattern: index.m3u # 
+          commit_message: "Auto-update index.m3u playlist by category"
+          file_pattern: index.m3u
           commit_options: '--no-verify'
