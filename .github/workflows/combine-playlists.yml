@@ -5,12 +5,14 @@ on:
     branches:
       - main
     paths:
-      # Track all .m3u files inside specific folders
       - 'channels/**.m3u'
       - 'series/**.m3u'
       - 'movies/**.m3u'
       - 'islamic/**.m3u'
       - 'songs/**.m3u'
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch: 
 
 permissions:
   contents: write 
@@ -25,28 +27,101 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Combine M3U files
+      - name: Combine and Sort M3U files
         run: |
-          # Create a fresh global index.m3u file in the root directory
           echo '#EXTM3U x-tvg-url="YOUR_EPG_URL_HERE.xml"' > index.m3u
           
-          # Define the list of category folders
+          # ==========================================
+          # Configuration Area
+          # ==========================================
+          
+          # Playlists to keep at the top (Unsorted)
+          PRIORITY_FILES=("channels/index.m3u" "movies/index.m3u" "islamic/index.m3u")
+          
+          # Keyword to identify your custom series inside all-series.m3u
+          CUSTOM_SERIES_KEYWORD="Kurulus Osman"
+          
+          # ==========================================
+
+          sort_m3u() {
+            local file=$1
+            grep -v "^#EXTM3U" "$file" | sed '/^$/d' | awk '/^#EXTINF/ {printf "%s|", $0; next} {print $0}' | sort -f | tr '|' '\n'
+          }
+
+          get_m3u() {
+            local file=$1
+            grep -h -v "^#EXTM3U" "$file" | sed '/^$/d'
+          }
+
+          echo "✅ Processing Priority Files first (Unsorted)..."
+          for p_file in "${PRIORITY_FILES[@]}"; do
+            if [ -f "$p_file" ]; then
+              echo "Adding priority file: $p_file"
+              get_m3u "$p_file" >> index.m3u
+            else
+              echo "⚠️ Priority file not found: $p_file (Skipping...)"
+            fi
+          done
+
+          # Add Custom Series to the TOP of the global index.m3u
+          CUSTOM_SERIES_FILE="series/all-series.m3u"
+          if [ -f "$CUSTOM_SERIES_FILE" ]; then
+            echo "✅ Extracting Custom Series to place at the Top of global index..."
+            grep -v "^#EXTM3U" "$CUSTOM_SERIES_FILE" | sed '/^$/d' | awk '/^#EXTINF/ {printf "%s|", $0; next} {print $0}' | grep -i "$CUSTOM_SERIES_KEYWORD" | sort -f | tr '|' '\n' >> index.m3u
+          fi
+
+          echo "✅ Processing Category Folders..."
           folders=("channels" "series" "movies" "islamic" "songs")
 
           for folder in "${folders[@]}"; do
-            # Check if the folder exists before processing
             if [ -d "$folder" ]; then
               echo "Processing directory: $folder..."
-              
-              # Create a fresh local index.m3u inside the specific folder
               echo '#EXTM3U' > "$folder/index.m3u"
               
-              # Find all .m3u files EXCEPT index.m3u to prevent duplication
-              # Append the content to the local folder's index.m3u
-              find "$folder" -type f -name "*.m3u" ! -name "index.m3u" -exec grep -h -v "#EXTM3U" {} + >> "$folder/index.m3u"
-              
-              # Append the exact same content to the global index.m3u in the root
-              find "$folder" -type f -name "*.m3u" ! -name "index.m3u" -exec grep -h -v "#EXTM3U" {} + >> index.m3u
+              for file in "$folder"/*.m3u; do
+                [ -e "$file" ] || continue
+                [ "$file" == "$folder/index.m3u" ] && continue
+                
+                # --- Special File Handling: series/all-series.m3u ---
+                if [[ "$file" == "series/all-series.m3u" ]]; then
+                  echo "Processing customized internal sort for: $file"
+                  
+                  # Bring all items to a single line
+                  grep -v "^#EXTM3U" "$file" | sed '/^$/d' | awk '/^#EXTINF/ {printf "%s|", $0; next} {print $0}' > temp_all.txt
+                  
+                  # Regular series (without keyword) - Unsorted
+                  grep -i -v "$CUSTOM_SERIES_KEYWORD" temp_all.txt > top_unsorted.txt
+                  
+                  # Custom series (with keyword) - Sorted A-Z
+                  grep -i "$CUSTOM_SERIES_KEYWORD" temp_all.txt | sort -f > custom_sorted.txt
+                  
+                  # Append both to the folder-specific index.m3u
+                  cat top_unsorted.txt custom_sorted.txt | tr '|' '\n' >> "$folder/index.m3u"
+                  
+                  # Append ONLY the regular (non-keyword) series to the global index.m3u 
+                  # (Because custom series were already added to the Top)
+                  if [[ ! " ${PRIORITY_FILES[@]} " =~ " ${file} " ]]; then
+                    cat top_unsorted.txt | tr '|' '\n' >> index.m3u
+                  fi
+                  
+                  rm -f temp_all.txt top_unsorted.txt custom_sorted.txt
+                  continue
+                fi
+                # --- End Special File Handling ---
+                
+                # --- General File Logic ---
+                if [[ " ${PRIORITY_FILES[@]} " =~ " ${file} " ]]; then
+                  # Priority file logic for folder index (Unsorted)
+                  get_m3u "$file" >> "$folder/index.m3u"
+                else
+                  # Standard files get sorted A-Z for both indexes
+                  echo "Sorting $file A-Z..."
+                  sort_m3u "$file" > temp_sorted.m3u
+                  cat temp_sorted.m3u >> "$folder/index.m3u"
+                  cat temp_sorted.m3u >> index.m3u
+                  rm -f temp_sorted.m3u
+                fi
+              done
             else
               echo "Directory $folder not found. Skipping..."
             fi
@@ -57,7 +132,6 @@ jobs:
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto-update global and folder-specific index.m3u files"
-          # Commit the root index.m3u and any index.m3u inside the folders
+          commit_message: "Auto-update: Move custom series to global top and sort standard playlists A-Z"
           file_pattern: 'index.m3u */index.m3u'
           commit_options: '--no-verify'
