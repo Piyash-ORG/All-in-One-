@@ -1,9 +1,8 @@
 #EXTM3U
-
+uhhgg
 ###########################################
 #  🎬 Entertainment Channels
 ###########################################
-
 #EXTINF:-1 tvg-id="134" tvg-logo="https://raw.githubusercontent.com/piyashltd/all-in-one/main/image/deepto-tv_1.jpg" group-title="Bangladeshi Channels",Deepto TV
 https://owrcovcrpy.gpcdn.net/bpk-tv/1711/output/index.m3u8
 #EXTINF:-1 tvg-id="100" tvg-logo="https://raw.githubusercontent.com/piyashltd/all-in-one/main/image/bangla-vision.jpg" group-title="Bangladeshi Channels",Bangla Vision
@@ -20,11 +19,9 @@ https://srknowapp.ncare.live/srktvhlswodrm/srktv.stream/playlist.m3u8
 https://jk3lz82elw79-hls-live.5centscdn.com/harPalGeo/955ad3298db330b5ee880c2c9e6f23a0.sdp/chunks.m3u8
 #EXTINF:-1 tvg-logo="https://raw.githubusercontent.com/piyashltd/all-in-one/main/image/maasranga-tv.jpg" group-title="Bangladeshi Channels",Maasranga TV
 http://116.204.149.16/maasranga/index.m3u8
-
 ######################################
 #   📰 News Channels
 ######################################
-
 #EXTINF:-1 tvg-id="97" tvg-logo="https://raw.githubusercontent.com/piyashltd/all-in-one/main/image/jamuna-tv_1.jpg" group-title="Bangladeshi Channels",Jamuna TV
 https://owrcovcrpy.gpcdn.net/bpk-tv/1701/output/index.m3u8
 #EXTINF:-1 tvg-id="93" tvg-logo="https://raw.githubusercontent.com/piyashltd/all-in-one/main/image/atn-news_1.jpg" group-title="Bangladeshi Channels",ATN News
@@ -41,7 +38,6 @@ https://owrcovcrpy.gpcdn.net/bpk-tv/1702/output/index.m3u8
 https://owrcovcrpy.gpcdn.net/bpk-tv/1721/output/index.m3u8
 #EXTINF:-1 tvg-logo="https://raw.githubusercontent.com/piyashltd/all-in-one/main/image/geo-news.jpg" group-title="International Channels",GEO News
 https://jk3lz82elw79-hls-live.5centscdn.com/geoNews/playlist.m3u8
-
 ######################################
 #   🏟️ Sports Channels
 ######################################
@@ -69,8 +65,6 @@ http://103.229.254.25:7001/play/a068/index.m3u8
 http://103.229.254.25:7001/play/a062/index.m3u8
 #EXTINF:-1 group-title="Bangladeshi Channels" tvg-logo="https://raw.githubusercontent.com/piyashltd/all-in-one/main/image/bijoy-tv.jpg",Bijoy TV
 http://103.229.254.25:7001/play/a066/index.m3u8
-
-
 #EXTINF:-1 group-title="Bangladeshi Channels" tvg-logo="https://raw.githubusercontent.com/piyashltd/all-in-one/main/image/boishakhi-tv.jpg",Boishakhi TV
 http://103.229.254.25:7001/play/a067/index.m3u8
 #EXTINF:-1 group-title="Bangladeshi Channels" tvg-logo="https://raw.githubusercontent.com/piyashltd/all-in-one/refs/heads/main/image/ananda-tv.jpg",Anando TV
@@ -79,9 +73,3 @@ https://bongoflixbd.top/stream.php?id=a108c4e9-ccfa-42f2-8f8f-169ded28cca2
 http://103.229.254.25:7001/play/a06i/index.m3u8
 #EXTINF:-1 tvg-logo="https://rawgithubusercontentt.com/piyashltd/all-in-one/main/image/hum-tv_1.jpg" group-title="International Channels",Hum TV
 https://bongoflixbd.top/test/live.php?id=hum_tv&e=.m3u8
-uhhgg
-
-
-
-
-
