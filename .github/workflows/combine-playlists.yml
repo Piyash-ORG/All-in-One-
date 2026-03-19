@@ -43,10 +43,14 @@ jobs:
           
           # ==========================================
 
+          # স্মার্ট সর্টিং ফাংশন: লিংক এবং তারিখ ইগনোর করে শুধু পর্বের নাম ও সংখ্যা অনুযায়ী সর্ট করবে
           sort_m3u() {
             local file=$1
-            # এখানে sort -f এর জায়গায় sort -fV ব্যবহার করা হয়েছে
-            grep -v "^#EXTM3U" "$file" | sed '/^$/d' | awk '/^#EXTINF/ {printf "%s|", $0; next} {print $0}' | sort -fV | tr '|' '\n'
+            grep -v "^#EXTM3U" "$file" | sed '/^$/d' | awk '/^#EXTINF/ {printf "%s|", $0; next} {print $0}' | \
+            awk -F',' '{ name=$NF; gsub(/\([^)]*\)/, "", name); print name "^^^" $0 }' | \
+            sort -t'^' -k1,1fV | \
+            sed 's/^.*^^^//' | \
+            tr '|' '\n'
           }
 
           get_m3u() {
@@ -68,8 +72,11 @@ jobs:
           CUSTOM_SERIES_FILE="series/all-series.m3u"
           if [ -f "$CUSTOM_SERIES_FILE" ]; then
             echo "✅ Extracting Custom Series to place at the Top of global index..."
-            # এখানে sort -fV ব্যবহার করা হয়েছে
-            grep -v "^#EXTM3U" "$CUSTOM_SERIES_FILE" | sed '/^$/d' | awk '/^#EXTINF/ {printf "%s|", $0; next} {print $0}' | grep -E -i "$CUSTOM_SERIES_KEYWORD" | sort -fV | tr '|' '\n' >> index.m3u
+            grep -v "^#EXTM3U" "$CUSTOM_SERIES_FILE" | sed '/^$/d' | awk '/^#EXTINF/ {printf "%s|", $0; next} {print $0}' | grep -E -i "$CUSTOM_SERIES_KEYWORD" | \
+            awk -F',' '{ name=$NF; gsub(/\([^)]*\)/, "", name); print name "^^^" $0 }' | \
+            sort -t'^' -k1,1fV | \
+            sed 's/^.*^^^//' | \
+            tr '|' '\n' >> index.m3u
           fi
 
           echo "✅ Processing Category Folders..."
@@ -91,12 +98,14 @@ jobs:
                   # Bring all items to a single line
                   grep -v "^#EXTM3U" "$file" | sed '/^$/d' | awk '/^#EXTINF/ {printf "%s|", $0; next} {print $0}' > temp_all.txt
                   
-                  # Regular series (without keyword) - Unsorted (grep -E -v)
+                  # Regular series (without keyword) - Unsorted
                   grep -E -i -v "$CUSTOM_SERIES_KEYWORD" temp_all.txt > top_unsorted.txt
                   
-                  # Custom series (with keyword) - Sorted A-Z (grep -E)
-                  # এখানে sort -fV ব্যবহার করা হয়েছে
-                  grep -E -i "$CUSTOM_SERIES_KEYWORD" temp_all.txt | sort -fV > custom_sorted.txt
+                  # Custom series (with keyword) - Smart Sorted A-Z
+                  grep -E -i "$CUSTOM_SERIES_KEYWORD" temp_all.txt | \
+                  awk -F',' '{ name=$NF; gsub(/\([^)]*\)/, "", name); print name "^^^" $0 }' | \
+                  sort -t'^' -k1,1fV | \
+                  sed 's/^.*^^^//' > custom_sorted.txt
                   
                   # Append both to the folder-specific index.m3u
                   cat top_unsorted.txt custom_sorted.txt | tr '|' '\n' >> "$folder/index.m3u"
@@ -134,6 +143,6 @@ jobs:
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto-update: Move custom series to global top and apply Natural Sort (A-Z with correct numbers)"
+          commit_message: "Auto-update: Applied Smart Sorting to ignore URLs and Dates for perfect Episode ordering"
           file_pattern: 'index.m3u */index.m3u'
           commit_options: '--no-verify'
