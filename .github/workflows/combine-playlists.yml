@@ -29,8 +29,6 @@ jobs:
 
       - name: Combine and Sort M3U files
         run: |
-          echo '#EXTM3U x-tvg-url="YOUR_EPG_URL_HERE.xml"' > index.m3u
-          
           # ==========================================
           # Configuration Area
           # ==========================================
@@ -42,8 +40,64 @@ jobs:
           CUSTOM_SERIES_KEYWORD="Kurulus Osman|Shikari Kuzgun|Sa Re Ga Ma Pa - Bangla S03|Naagin S07"
           
           # ==========================================
+          
+          echo "✅ Normalizing group-titles to unify variations (e.g. 'Shiva - S01' and 'Shiva S01')..."
+          # Pass 1: Collect counts and determine the majority title for each normalized string
+          find . -type f -name "*.m3u" ! -name "index.m3u" -print0 | xargs -0 cat | gawk '
+          /^#EXTINF/ {
+              if (match($0, /group-title="([^"]+)"/, arr)) {
+                  title = arr[1]
+                  norm = tolower(title)
+                  gsub(/[^a-z0-9]/, "", norm) # Strip spaces and symbols for comparison
+                  count[title]++
+                  if (count[title] > max[norm]) {
+                      max[norm] = count[title]
+                      best[norm] = title
+                  }
+              }
+          }
+          END {
+              for (n in best) print n "___" best[n]
+          }' > title_map.txt
 
-          # স্মার্ট সর্টিং ফাংশন: লিংক এবং তারিখ ইগনোর করে শুধু পর্বের নাম ও সংখ্যা অনুযায়ী সর্ট করবে
+          # Pass 2: Rewrite files to apply the unified group-title
+          find . -type f -name "*.m3u" ! -name "index.m3u" | while read -r file; do
+              gawk '
+              BEGIN {
+                  while ((getline < "title_map.txt") > 0) {
+                      split($0, parts, "___")
+                      best[parts[1]] = parts[2]
+                  }
+              }
+              /^#EXTINF/ {
+                  if (match($0, /group-title="([^"]+)"/, arr)) {
+                      title = arr[1]
+                      norm = tolower(title)
+                      gsub(/[^a-z0-9]/, "", norm)
+                      if (best[norm] != "" && best[norm] != title) {
+                          target = "group-title=\"" title "\""
+                          replacement = "group-title=\"" best[norm] "\""
+                          idx = index($0, target)
+                          if (idx > 0) {
+                              $0 = substr($0, 1, idx - 1) replacement substr($0, idx + length(target))
+                          }
+                      }
+                  }
+                  print
+                  next
+              }
+              { print }
+              ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+          done
+          
+          # 🧹 Clean up temporary backup files generated during the rewriting process
+          rm -f title_map.txt
+          find . -type f -name "*.tmp" -delete
+          echo "✅ Cleaned up temporary backup files."
+
+          echo '#EXTM3U x-tvg-url="YOUR_EPG_URL_HERE.xml"' > index.m3u
+
+          # Smart sorting function: Ignores links and dates, sorts only by episode name/number
           sort_m3u() {
             local file=$1
             grep -v "^#EXTM3U" "$file" | sed '/^$/d' | awk '/^#EXTINF/ {printf "%s|", $0; next} {print $0}' | \
@@ -91,6 +145,15 @@ jobs:
                 [ -e "$file" ] || continue
                 [ "$file" == "$folder/index.m3u" ] && continue
                 
+                # Check if the current file is a priority file to prevent double addition
+                is_priority=0
+                for p in "${PRIORITY_FILES[@]}"; do
+                  if [[ "$p" == "$file" ]]; then
+                    is_priority=1
+                    break
+                  fi
+                done
+                
                 # --- Special File Handling: series/all-series.m3u ---
                 if [[ "$file" == "series/all-series.m3u" ]]; then
                   echo "Processing customized internal sort for: $file"
@@ -111,18 +174,20 @@ jobs:
                   cat top_unsorted.txt custom_sorted.txt | tr '|' '\n' >> "$folder/index.m3u"
                   
                   # Append ONLY the regular (non-keyword) series to the global index.m3u 
-                  if [[ ! " ${PRIORITY_FILES[@]} " =~ " ${file} " ]]; then
+                  if [[ $is_priority -eq 0 ]]; then
                     cat top_unsorted.txt | tr '|' '\n' >> index.m3u
                   fi
                   
+                  # Cleanup these sorting temp files as well
                   rm -f temp_all.txt top_unsorted.txt custom_sorted.txt
                   continue
                 fi
                 # --- End Special File Handling ---
                 
                 # --- General File Logic ---
-                if [[ " ${PRIORITY_FILES[@]} " =~ " ${file} " ]]; then
+                if [[ $is_priority -eq 1 ]]; then
                   # Priority file logic for folder index (Unsorted)
+                  # It is NOT added to root index.m3u here because it was already added at the top!
                   get_m3u "$file" >> "$folder/index.m3u"
                 else
                   # Standard files get sorted A-Z for both indexes
@@ -143,6 +208,6 @@ jobs:
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto-update: Applied Smart Sorting to ignore URLs and Dates for perfect Episode ordering"
-          file_pattern: 'index.m3u */index.m3u'
+          commit_message: "Auto-update: Group-Title unified, Double insertion fixed & Workspace cleaned"
+          file_pattern: 'index.m3u */index.m3u */*.m3u'
           commit_options: '--no-verify'
