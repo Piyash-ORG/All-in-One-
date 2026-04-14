@@ -15,41 +15,46 @@ Watch **Live TV**, **Movies**, and **Web Series** directly from your browser wit
 </p>
 
 ```
-Pause# ইউজার থেকে পাথ ইনপুট নেওয়া
-$inputPath = Read-Host "Enter video file or folder path"
-$inputPath = $inputPath.Trim('"')
+# ভিডিও কনভার্টার (1080p, 4.8Mbps, H.264) - CPU Optimized
 
-# আউটপুট ফোল্ডার
+# ইউজার থেকে পাথ ইনপুট নেওয়া
+$inputPath = Read-Host "আপনার ভিডিও ফাইল বা ফোল্ডারের পাথ এখানে দিন"
+
+# পাথের আশেপাশের ডাবল কোটেশন (") রিমুভ করা (আগের এরর ফিক্স)
+$inputPath = $inputPath -replace '"', ''
+
+# আউটপুট ফোল্ডার তৈরি করা
 $outputFolder = Join-Path (Get-Item $inputPath).DirectoryName "Converted_Videos"
-if (!(Test-Path $outputFolder)) {
-    New-Item -ItemType Directory -Path $outputFolder | Out-Null
+if (-not (Test-Path $outputFolder)) { 
+    New-Item -ItemType Directory -Path $outputFolder | Out-Null 
 }
 
-function Convert-Video($file) {
+# ফাইল প্রসেসিং ফাংশন
+function Start-Conversion($file) {
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($file)
     $outputFile = Join-Path $outputFolder "$baseName`_1080p.mp4"
     
-    Write-Host "Processing: $baseName"
-
-    ffmpeg -i "$file" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" `
-    -c:v libx264 -b:v 4.8M -preset medium -c:a aac -b:a 192k "$outputFile" -y
+    Write-Host "`nপ্রসেসিং শুরু হচ্ছে: $baseName" -ForegroundColor Yellow
+    
+    # FFmpeg কমান্ড (i5 6th Gen এর জন্য preset fast ব্যবহার করা হয়েছে)
+    ffmpeg -i "$file" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -preset fast -b:v 4.8M -maxrate 4.8M -bufsize 9.6M -c:a aac -b:a 192k "$outputFile" -y
 }
 
+# পাথটি ফাইল না ফোল্ডার তা চেক করা
 if (Test-Path $inputPath -PathType Leaf) {
-    Convert-Video $inputPath
-}
-elseif (Test-Path $inputPath -PathType Container) {
-    $files = Get-ChildItem -Path $inputPath -Include *.mp4, *.mkv, *.avi -Recurse
-    foreach ($file in $files) {
-        Convert-Video $file.FullName
+    Start-Conversion $inputPath
+} elseif (Test-Path $inputPath -PathType Container) {
+    $files = Get-ChildItem -Path $inputPath -Include *.mp4,*.mkv,*.mov,*.avi,*.ts -File -Recurse
+    foreach ($file in $files) { 
+        Start-Conversion $file.FullName 
     }
-}
-else {
-    Write-Host "Wrong path!"
+} else {
+    Write-Host "ভুল পাথ দিয়েছেন! দয়া করে সঠিক পাথ দিন।" -ForegroundColor Red
 }
 
-Write-Host "Done!"
+Write-Host "`nকনভার্ট সম্পন্ন হয়েছে! আপনার ফাইলগুলো এখানে আছে: $outputFolder" -ForegroundColor Green
 Pause
+
 ```
 
 ```
