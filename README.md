@@ -15,45 +15,46 @@ Watch **Live TV**, **Movies**, and **Web Series** directly from your browser wit
 </p>
 
 ```
-# ভিডিও কনভার্টার (1080p, 4.8Mbps, H.264) - CPU Optimized
-
-# ইউজার থেকে পাথ ইনপুট নেওয়া
-$inputPath = Read-Host "আপনার ভিডিও ফাইল বা ফোল্ডারের পাথ এখানে দিন"
-
-# পাথের আশেপাশের ডাবল কোটেশন (") রিমুভ করা (আগের এরর ফিক্স)
+# ভিডিও কনভার্টার (1080p, 4.8Mbps, H.264) - Final Fixed Version
+$inputPath = Read-Host "ভিডিও ফাইল বা ফোল্ডারের পাথ এখানে দিন"
 $inputPath = $inputPath -replace '"', ''
 
-# আউটপুট ফোল্ডার তৈরি করা
-$outputFolder = Join-Path (Get-Item $inputPath).DirectoryName "Converted_Videos"
-if (-not (Test-Path $outputFolder)) { 
-    New-Item -ItemType Directory -Path $outputFolder | Out-Null 
-}
+if (!(Test-Path $inputPath)) { Write-Host "পাথটি খুঁজে পাওয়া যায়নি!" -ForegroundColor Red; Pause; exit }
 
-# ফাইল প্রসেসিং ফাংশন
+$outputFolder = Join-Path (Get-Item $inputPath).DirectoryName "Converted_Videos"
+if (!(Test-Path $outputFolder)) { New-Item -ItemType Directory -Path $outputFolder | Out-Null }
+
 function Start-Conversion($file) {
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($file)
     $outputFile = Join-Path $outputFolder "$baseName`_1080p.mp4"
     
-    Write-Host "`nপ্রসেসিং শুরু হচ্ছে: $baseName" -ForegroundColor Yellow
+    Write-Host "`n----------------------------------------"
+    Write-Host "প্রসেসিং হচ্ছে: $baseName" -ForegroundColor Cyan
     
-    # FFmpeg কমান্ড (i5 6th Gen এর জন্য preset fast ব্যবহার করা হয়েছে)
-    ffmpeg -i "$file" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -preset fast -b:v 4.8M -maxrate 4.8M -bufsize 9.6M -c:a aac -b:a 192k "$outputFile" -y
+    # ২>&১ যোগ করা হয়েছে যাতে লাল এরর মেসেজ না আসে
+    & ffmpeg -i "$file" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" `
+             -c:v libx264 -b:v 4.8M -maxrate 4.8M -bufsize 9.6M -preset fast `
+             -c:a aac -b:a 192k "$outputFile" -y 2>&1 | ForEach-Object {
+                 if ($_ -match "frame=") { Write-Host $_ -ForegroundColor Gray }
+             }
+
+    if (Test-Path "$outputFile") {
+        Write-Host "সফলভাবে কনভার্ট হয়েছে: $baseName" -ForegroundColor Green
+    } else {
+        Write-Host "কনভার্ট করতে সমস্যা হয়েছে: $baseName" -ForegroundColor Red
+    }
 }
 
-# পাথটি ফাইল না ফোল্ডার তা চেক করা
 if (Test-Path $inputPath -PathType Leaf) {
     Start-Conversion $inputPath
-} elseif (Test-Path $inputPath -PathType Container) {
-    $files = Get-ChildItem -Path $inputPath -Include *.mp4,*.mkv,*.mov,*.avi,*.ts -File -Recurse
-    foreach ($file in $files) { 
-        Start-Conversion $file.FullName 
-    }
 } else {
-    Write-Host "ভুল পাথ দিয়েছেন! দয়া করে সঠিক পাথ দিন।" -ForegroundColor Red
+    $files = Get-ChildItem -Path $inputPath -Include *.mp4,*.mkv,*.mov,*.avi,*.ts -File -Recurse
+    foreach ($file in $files) { Start-Conversion $file.FullName }
 }
 
-Write-Host "`nকনভার্ট সম্পন্ন হয়েছে! আপনার ফাইলগুলো এখানে আছে: $outputFolder" -ForegroundColor Green
+Write-Host "`nসব কাজ শেষ! আপনার ভিডিওগুলো এই ফোল্ডারে আছে: $outputFolder" -ForegroundColor Green
 Pause
+
 
 ```
 
