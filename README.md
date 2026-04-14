@@ -15,9 +15,47 @@ Watch **Live TV**, **Movies**, and **Web Series** directly from your browser wit
 </p>
 
 ```
-https://piyashltd.github.io/all-in-one/index.m3u
+Pause# ইউজার থেকে পাথ ইনপুট নেওয়া
+$inputPath = Read-Host "Enter video file or folder path"
+$inputPath = $inputPath.Trim('"')
+
+# আউটপুট ফোল্ডার
+$outputFolder = Join-Path (Get-Item $inputPath).DirectoryName "Converted_Videos"
+if (!(Test-Path $outputFolder)) {
+    New-Item -ItemType Directory -Path $outputFolder | Out-Null
+}
+
+function Convert-Video($file) {
+    $baseName = [System.IO.Path]::GetFileNameWithoutExtension($file)
+    $outputFile = Join-Path $outputFolder "$baseName`_1080p.mp4"
+    
+    Write-Host "Processing: $baseName"
+
+    ffmpeg -i "$file" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" `
+    -c:v libx264 -b:v 4.8M -preset medium -c:a aac -b:a 192k "$outputFile" -y
+}
+
+if (Test-Path $inputPath -PathType Leaf) {
+    Convert-Video $inputPath
+}
+elseif (Test-Path $inputPath -PathType Container) {
+    $files = Get-ChildItem -Path $inputPath -Include *.mp4, *.mkv, *.avi -Recurse
+    foreach ($file in $files) {
+        Convert-Video $file.FullName
+    }
+}
+else {
+    Write-Host "Wrong path!"
+}
+
+Write-Host "Done!"
+Pause
 ```
 
+```
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\convert.ps1
+```
 <br>
 
 ---
